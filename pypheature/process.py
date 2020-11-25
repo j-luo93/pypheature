@@ -1,9 +1,11 @@
 import unicodedata
-from typing import List
+from typing import List, Dict
 
 import pandas as pd
+import re
 
 from .segment import Segment
+from .diacritic import get_diacritic
 
 
 class FeatureProcessor:
@@ -18,21 +20,20 @@ class FeatureProcessor:
         df.loc[57]['delayed release'] = '+'
 
         # Obtain all unicode categories.
-        df['NFD'] = df['ipa'].apply(lambda s: unicodedata.normalize('NFD', s))
-        df['unicode_category'] = df['NFD'].apply(lambda lst: [unicodedata.category(c) for c in lst])
+        df['ipa'] = df['ipa'].apply(lambda s: unicodedata.normalize('NFD', s))
+        df['unicode_category'] = df['ipa'].apply(lambda lst: [unicodedata.category(c) for c in lst])
 
         def tie_bar_treatment(item):
             """Treat tie bar specially."""
-            nfd, cat = item
-            return ['Tb' if char == '͡' else cc for char, cc in zip(nfd, cat)]
+            ipa, cat = item
+            return ['Tb' if char == '͡' else cc for char, cc in zip(ipa, cat)]
 
-        df['category_x'] = df[['NFD', 'unicode_category']].apply(tie_bar_treatment, axis=1)
+        df['category_x'] = df[['ipa', 'unicode_category']].apply(tie_bar_treatment, axis=1)
 
         # Remove anything with `Mn` category unicodes except 'ç', and use them as the base.
-        base_df = df[(~df['category_x'].apply(lambda lst: 'Mn' in lst)) | (df['NFD'] == 'ç')]
+        base_df = df[(~df['category_x'].apply(lambda lst: 'Mn' in lst)) | (df['ipa'] == 'ç')]
 
         save_cols = list(base_df.columns)
-        save_cols.remove('NFD')
         save_cols.remove('unicode_category')
         save_cols.remove('category_x')
         self._data = base_df[save_cols].copy()
@@ -59,8 +60,22 @@ class FeatureProcessor:
             assert s in ['0', 0]
             return None
 
-        self._base_segments = list()
+        self._base_segments: Dict[str, Segment] = dict()
         for i, s in self._data.iterrows():
             kwargs = {f: to_value(s[c]) for f, c in feat2col.items()}
             seg = Segment(s['ipa'], **kwargs)
-            self._base_segments.append(seg)
+            self._base_segments[s['ipa']] = seg
+
+        # Obtain regex for matching the leading base segment.
+        pat = '(' + '|'.join(sorted(self._base_segments, key=len, reverse=True)) + ')'
+        self._base_regex = re.compile(rf'^{pat}')
+
+    def process(self, raw: str) -> Segment:
+        """Process one raw segments by decomposing it into one base segment and multiple diacritics if any."""
+        raw = unicodedata.normalize('NFD', raw)
+        base = self._base_regex.match(raw).group(1)
+        seg = self._base_segments[base]
+        for d in raw[len(base):]:
+            d = get_diacritic(d)
+            seg = d.apply_to(seg)
+        return seg

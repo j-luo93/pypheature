@@ -1,4 +1,5 @@
 """No checks for the diacritics -- you might apply a syllabic diacritic to a vowel."""
+from __future__ import annotations
 
 from dataclasses import asdict
 from typing import ClassVar, Dict, Optional
@@ -6,10 +7,29 @@ from typing import ClassVar, Dict, Optional
 from .segment import Segment
 
 
-class Diacritic:
+class DiacriticMetaclass(type):
+
+    __registry = dict()
+
+    def __init__(cls, *args, **kwargs):
+        name = cls.__name__
+        if name != 'Diacritic' and name not in DiacriticMetaclass.__registry:
+            DiacriticMetaclass.__registry[cls.ipa] = cls
+        super().__init__(*args, **kwargs)
+
+    @staticmethod
+    def get_diacritic(raw: str):
+        return DiacriticMetaclass.__registry[raw]()
+
+
+def get_diacritic(raw: str) -> Diacritic:
+    return DiacriticMetaclass.get_diacritic(raw)
+
+
+class Diacritic(metaclass=DiacriticMetaclass):
 
     ipa: ClassVar[str]
-    changes: Optional[ClassVar[Dict[str, bool]]] = None
+    changes: ClassVar[Optional[Dict[str, bool]]] = None
 
     def apply_to(self, seg: Segment) -> Segment:
         kwargs = asdict(seg)
@@ -17,6 +37,9 @@ class Diacritic:
         for k, v in self.changes.items():
             kwargs[k] = v
         return Segment(**kwargs)
+
+    def __repr__(self):
+        return f'Diacritic("{self.ipa}")'
 
 
 class Syllabic(Diacritic):
