@@ -6,11 +6,11 @@ import pandas as pd
 from .segment import Segment
 
 
-class HayesReader:
+class FeatureProcessor:
     """This reads the spreadsheet provided by Hayes."""
 
-    def __init__(self, path: str):
-        df = pd.read_excel(path).rename(columns={'Unnamed: 0': 'ipa'})
+    def __init__(self, hayes_path: str):
+        df = pd.read_excel(hayes_path).rename(columns={'Unnamed: 0': 'ipa'})
         # Fix errors in the original file.
         # This 'ŋ' should not have any diacritic.
         df.loc[33]['ipa'] = 'ŋ'
@@ -37,7 +37,8 @@ class HayesReader:
         save_cols.remove('category_x')
         self._data = base_df[save_cols].copy()
 
-    def process_segments(self) -> List[Segment]:
+        # -------------------- Process base segments ------------------- #
+
         feat2col = {f: f
                     for f in ['syllabic', 'consonantal', 'approximant', 'sonorant', 'continuant', 'trill', 'tap',
                               'front', 'back', 'high', 'low', 'tense', 'round', 'long', 'nasal', 'anterior',
@@ -58,9 +59,8 @@ class HayesReader:
             assert s in ['0', 0]
             return None
 
-        ret = list()
+        self._base_segments = list()
         for i, s in self._data.iterrows():
             kwargs = {f: to_value(s[c]) for f, c in feat2col.items()}
             seg = Segment(s['ipa'], **kwargs)
-            ret.append(seg)
-        return ret
+            self._base_segments.append(seg)
