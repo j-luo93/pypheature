@@ -1,3 +1,4 @@
+from typing import Union
 import unicodedata
 from typing import List, Dict
 
@@ -5,7 +6,8 @@ import pandas as pd
 import re
 
 from .segment import Segment
-from .diacritic import get_diacritic
+from .nphthong import Nphthong
+from .diacritic import get_diacritic, DiacriticInvalid
 
 
 class FeatureProcessor:
@@ -70,12 +72,24 @@ class FeatureProcessor:
         pat = '(' + '|'.join(sorted(self._base_segments, key=len, reverse=True)) + ')'
         self._base_regex = re.compile(rf'^{pat}')
 
-    def process(self, raw: str) -> Segment:
+    def process(self, raw: str) -> Union[Segment, Nphthong]:
         """Process one raw segments by decomposing it into one base segment and multiple diacritics if any."""
         raw = unicodedata.normalize('NFD', raw)
-        base = self._base_regex.match(raw).group(1)
-        seg = self._base_segments[base]
-        for d in raw[len(base):]:
-            d = get_diacritic(d)
-            seg = d.apply_to(seg)
-        return seg
+        base_raw = self._base_regex.match(raw).group(1)
+        base = self._base_segments[base_raw]
+        bases = [base]
+        i = len(base_raw)
+        while i < len(raw):
+            try:
+                # Apply diacritic on the last base segment.
+                d = get_diacritic(raw[i])
+                bases[-1] = d.apply_to(bases[-1])
+                i += 1
+            except DiacriticInvalid:
+                base_raw = self._base_regex.match(raw[i:]).group(1)
+                base = self._base_segments[base_raw]
+                i += len(base_raw)
+                bases.append(base)
+        if len(bases) == 1:
+            return bases[0]
+        return Nphthong(bases)

@@ -118,6 +118,9 @@ class Segment:
     spread_glottis: bool
     constricted_glottis: bool
 
+    def __str__(self):
+        return self.ipa
+
     # -------------------------------------------------------------- #
     #                             Manner                             #
     # -------------------------------------------------------------- #

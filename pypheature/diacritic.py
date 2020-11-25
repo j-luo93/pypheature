@@ -7,6 +7,10 @@ from typing import ClassVar, Dict, Optional
 from .segment import Segment
 
 
+class DiacriticInvalid(Exception):
+    """Raise this if this diacritic is not recognized."""
+
+
 class DiacriticMetaclass(type):
 
     __registry = dict()
@@ -19,6 +23,9 @@ class DiacriticMetaclass(type):
 
     @staticmethod
     def get_diacritic(raw: str):
+        if raw not in DiacriticMetaclass.__registry:
+            raise DiacriticInvalid(f'Unrecognized diacritic "{raw}".')
+
         return DiacriticMetaclass.__registry[raw]()
 
 
@@ -50,12 +57,12 @@ class Syllabic(Diacritic):
 
 class Creaky(Diacritic):
     ipa = '̰'
-    changes = {'spread_glottis': False, 'constricted': True}
+    changes = {'spread_glottis': False, 'constricted_glottis': True}
 
 
 class Breathy(Diacritic):
     ipa = '̤'
-    changes = {'spread_glottis': True, 'constricted': False}
+    changes = {'spread_glottis': True, 'constricted_glottis': False}
 
 
 class Voiceless(Diacritic):
@@ -95,7 +102,7 @@ class Long(Diacritic):
 
 class Aspirated(Diacritic):
     ipa = 'ʰ'
-    changes = {'spread_glottis': True, 'constricted': False}
+    changes = {'spread_glottis': True, 'constricted_glottis': False}
 
 
 class Palatalized(Diacritic):
