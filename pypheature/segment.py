@@ -132,7 +132,8 @@ class Segment:
 
     @sonority_class
     def is_glide(self) -> bool:
-        return not self.syllabic and not self.consonantal
+        # Make exceptions for 'ʍ', 'ɦ', 'h'.
+        return not self.syllabic and not self.consonantal and self.ipa not in ['ʍ', 'ɦ', 'h']
 
     @sonority_class
     def is_liquid(self) -> bool:
@@ -325,8 +326,3 @@ class Segment:
                 func(self)
             except ConditionNotMet:
                 pass
-            except ExclusivityFailure as e:
-                # Make exceptions for 'ʍ', 'ɦ', 'h'.
-                if name == 'sonority' and self.ipa in ['ʍ', 'ɦ', 'h']:
-                    continue
-                raise e
