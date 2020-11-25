@@ -1,4 +1,4 @@
-from .segment import Segment, check_exclusivity, natural_class
+from .segment import Segment, natural_class
 
 glottal_width_class = natural_class('glottal_width')
 
@@ -16,6 +16,3 @@ def is_constricted_glottis(seg: Segment) -> bool:
 @glottal_width_class
 def is_normal_glottis(seg: Segment) -> bool:
     return not seg.spread_glottis and not seg.constricted_glottis
-
-
-check_glottal_width_exclusivity = check_exclusivity('glottal_width')
