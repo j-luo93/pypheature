@@ -80,13 +80,48 @@ def condition(cond_func, *, _reverse: bool = False):
 reverse_condition = lambda func: condition(func, _reverse=True)
 
 
-class SegmentInvalid(Exception):
+class InvalidSegment(Exception):
     """Raise this if segment features are invalid."""
 
 
-opt_bool = Optional[bool]
+class InvalidComparision(Exception):
+    """Raise this if you are turning an `OptionalBool` object into a `bool` value."""
 
 
+class OptionalBool:
+
+    def __init__(self, value: Optional[bool]):
+        assert value in [True, False, None]
+        self._value = value
+
+    def __bool__(self):
+        if isinstance(self._value, bool):
+            return self._value
+        raise InvalidComparision(f'Cannot turn this into a boolean.')
+
+
+def safe_bool(cls):
+    """This wraps every method of the format "is_*" so that they can deal with `OptionalBool` -- you return False if any invalid comparison happens."""
+
+    def gen_wrapped(func):
+
+        @wraps(func)
+        def wrapped(*args, **kwargs):
+            try:
+                return func(*args, **kwargs)
+            except InvalidComparision:
+                return False
+
+        return wrapped
+
+    for name, func in cls.__dict__.items():
+        if name.startswith('is_'):
+            cls[name] = gen_wrapped(func)
+
+    return cls
+
+
+@safe_bool
 @dataclass
 class Segment:
     ipa: str
@@ -95,23 +130,23 @@ class Segment:
     approximant: bool
     sonorant: bool
     continuant: bool
-    delayed_release: opt_bool
+    delayed_release: OptionalBool
     trill: bool
     tap: bool
-    front: opt_bool
-    back: opt_bool
-    high: opt_bool
-    low: opt_bool
-    tense: opt_bool
+    front: OptionalBool
+    back: OptionalBool
+    high: OptionalBool
+    low: OptionalBool
+    tense: OptionalBool
     round: bool
     long: bool
     nasal: bool
     labial: bool
     coronal: bool
     dorsal: bool
-    anterior: opt_bool
-    distributed: opt_bool
-    strident: opt_bool
+    anterior: OptionalBool
+    distributed: OptionalBool
+    strident: OptionalBool
     lateral: bool
     labiodental: bool
     voice: bool
@@ -305,20 +340,21 @@ class Segment:
 
     def __post_init__(self):
 
+
         # ------------------ some feature-level checks ----------------- #
 
         if not self.is_obstruent() and self.delayed_release is not None:
-            raise SegmentInvalid(f'delayed_release only used for obstruents.')
+            raise InvalidSegment(f'delayed_release only used for obstruents.')
 
         if not self.is_coronal() and any(f is not None for f in [self.anterior, self.distributed, self.strident]):
-            raise SegmentInvalid(f'Coronal features only used for coronals.')
+            raise InvalidSegment(f'Coronal features only used for coronals.')
 
         if not self.is_dorsal() and any(f is not None for f in [self.high, self.low, self.back, self.front, self.tense]):
-            raise SegmentInvalid(f'Dorsal features only used for dorsals.')
+            raise InvalidSegment(f'Dorsal features only used for dorsals.')
 
         try:
             if self.is_low() and self.tense is not None:
-                raise SegmentInvalid(f'Low vowels should have 0 tense feature.')
+                raise InvalidSegment(f'Low vowels should have 0 tense feature.')
         except ConditionNotMet:
             pass
 

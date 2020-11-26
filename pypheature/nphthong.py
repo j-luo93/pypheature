@@ -1,8 +1,9 @@
 """This deals with diphthongs, triphthongs and more."""
 
 from dataclasses import dataclass
-from .segment import Segment
 from typing import List
+
+from .segment import Segment
 
 
 class InvalidNphthong(Exception):

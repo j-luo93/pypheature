@@ -1,13 +1,16 @@
-from typing import Union
+import re
 import unicodedata
-from typing import List, Dict
+from typing import Dict, List, Union
 
 import pandas as pd
-import re
 
-from .segment import Segment
+from .diacritic import InvalidDiacritic, get_diacritic
 from .nphthong import Nphthong
-from .diacritic import get_diacritic, DiacriticInvalid
+from .segment import Segment
+
+
+class InvalidBaseSegment(Exception):
+    """Raise this when there is no base segment found."""
 
 
 class FeatureProcessor:
@@ -20,6 +23,9 @@ class FeatureProcessor:
         df.loc[33]['ipa'] = 'ŋ'
         # This 'ʕ' should be a fricative, therefore delayed_release is True.
         df.loc[57]['delayed release'] = '+'
+        # Add 'ɐ' which is merged with 'a'.
+        df = df.append(df.loc[3], ignore_index=True)
+        df.loc[len(df) - 1]['ipa'] = 'ɐ'
 
         # Obtain all unicode categories.
         df['ipa'] = df['ipa'].apply(lambda s: unicodedata.normalize('NFD', s))
@@ -75,21 +81,26 @@ class FeatureProcessor:
     def process(self, raw: str) -> Union[Segment, Nphthong]:
         """Process one raw segments by decomposing it into one base segment and multiple diacritics if any."""
         raw = unicodedata.normalize('NFD', raw)
-        base_raw = self._base_regex.match(raw).group(1)
-        base = self._base_segments[base_raw]
-        bases = [base]
-        i = len(base_raw)
+
+        def get_base(s: str):
+            match = self._base_regex.match(s)
+            if match is None:
+                raise InvalidBaseSegment(f'Cannot find the base segment from {s}, which is part of {raw}.')
+            base_raw = match.group(1)
+            base = self._base_segments[base_raw]
+            return base
+
+        bases = [get_base(raw)]
+        i = len(bases[-1].ipa)
         while i < len(raw):
             try:
-                # Apply diacritic on the last base segment.
+                # Apply diacritic to the last base segment.
                 d = get_diacritic(raw[i])
                 bases[-1] = d.apply_to(bases[-1])
                 i += 1
-            except DiacriticInvalid:
-                base_raw = self._base_regex.match(raw[i:]).group(1)
-                base = self._base_segments[base_raw]
-                i += len(base_raw)
-                bases.append(base)
+            except InvalidDiacritic:
+                bases.append(get_base(raw[i:]))
+                i += len(bases[-1].ipa)
         if len(bases) == 1:
             return bases[0]
         return Nphthong(bases)

@@ -1,13 +1,15 @@
 """No checks for the diacritics -- you might apply a syllabic diacritic to a vowel."""
 from __future__ import annotations
 
+import logging
 from dataclasses import asdict
+from functools import wraps
 from typing import ClassVar, Dict, Optional
 
 from .segment import Segment
 
 
-class DiacriticInvalid(Exception):
+class InvalidDiacritic(Exception):
     """Raise this if this diacritic is not recognized."""
 
 
@@ -24,7 +26,7 @@ class DiacriticMetaclass(type):
     @staticmethod
     def get_diacritic(raw: str):
         if raw not in DiacriticMetaclass.__registry:
-            raise DiacriticInvalid(f'Unrecognized diacritic "{raw}".')
+            raise InvalidDiacritic(f'Unrecognized diacritic "{raw}".')
 
         return DiacriticMetaclass.__registry[raw]()
 
@@ -112,7 +114,7 @@ class Palatalized(Diacritic):
 
 class Labialized(Diacritic):
     ipa = 'ʷ'
-    change = {'labial': True, 'round': True}
+    changes = {'labial': True, 'round': True}
 
 
 class Velarized(Diacritic):
@@ -138,3 +140,73 @@ class Rhoticity(Diacritic):
 class Ejective(Diacritic):
     ipa = 'ʼ'
     changes = {'spread_glottis': False, 'constricted_glottis': True}
+
+
+def ignored(cls):
+    """A decorator for the class which would gives some warning whenever `apply_to` is used."""
+    old_func = cls.apply_to
+
+    @wraps(old_func)
+    def wrapped(*args, **kwargs):
+        logging.warn(
+            f'This diacrictic "{cls.ipa}" is effectively ignored since there are no corresponding distintive features yet.')
+        return old_func(*args, **kwargs)
+
+    cls.apply_to = wrapped
+    cls.changes = dict()
+    return cls
+
+
+@ignored
+class FallingTone(Diacritic):
+    ipa = '̂'
+
+
+@ignored
+class RisingTone(Diacritic):
+    ipa = '̌'
+
+
+@ignored
+class HalfLong(Diacritic):
+    ipa = 'ˑ'
+
+
+class Voiced(Diacritic):
+    ipa = '̬'
+    changes = {'voice': True}
+
+
+class UpTieBar(Diacritic):
+    ipa = '͡'
+    changes = dict()
+
+
+class DownTieBar(Diacritic):
+    ipa = '͜'
+    changes = dict()
+
+
+@ignored
+class Lowered(Diacritic):
+    ipa = '̞'
+
+
+class NonSyllabic(Diacritic):
+    ipa = '̯'
+    changes = {'syllabic': False}
+
+
+class Laminal(Diacritic):
+    ipa = '̻'
+    changes = {'distributed': True}
+
+
+@ignored
+class ExtraShort(Diacritic):
+    ipa = '̆'
+
+
+@ignored
+class HighTone(Diacritic):
+    ipa = '́'
