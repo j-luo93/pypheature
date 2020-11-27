@@ -18,14 +18,37 @@ class FeatureProcessor:
 
     def __init__(self, hayes_path: str):
         df = pd.read_excel(hayes_path).rename(columns={'Unnamed: 0': 'ipa'})
-        # Fix errors in the original file.
+
+        # -------------- Fix errors in the original file. -------------- #
+
         # This 'ŋ' should not have any diacritic.
         df.loc[33]['ipa'] = 'ŋ'
+
         # This 'ʕ' should be a fricative, therefore delayed_release is True.
         df.loc[57]['delayed release'] = '+'
+
         # Add 'ɐ' which is merged with 'a'.
-        df = df.append(df.loc[3], ignore_index=True)
+        df = df.append(df.loc[3].copy(), ignore_index=True)
         df.loc[len(df) - 1]['ipa'] = 'ɐ'
+
+        # Add 'ɜ' which is merged with 'ə'
+        df = df.append(df.loc[11].copy(), ignore_index=True)
+        df.loc[len(df) - 1]['ipa'] = 'ɜ'
+
+        # Define 'ʜ' as the voiceless pharyngeal trill (I don't know how to define the place of epiglottis), which is close to
+        # the voiceless pharyngeal fricative 'ħ'.
+        df = df.append(df.loc[56].copy(), ignore_index=True)
+        df.loc[len(df) - 1]['ipa'] = 'ʜ'
+        # A trill is a liquid, not an obstruent (like fricative).
+        df.loc[len(df) - 1]['sonorant'] = '+'
+        df.loc[len(df) - 1]['approximant'] = '+'
+        df.loc[len(df) - 1]['delayed release'] = '0'
+        df.loc[len(df) - 1]['trill'] = '+'
+
+        # Define 'ʡ' as the voiced counterpart for 'ʜ'.
+        df = df.append(df.loc[len(df) - 1].copy(), ignore_index=True)
+        df.loc[len(df) - 1]['ipa'] = 'ʡ'
+        df.loc[len(df) - 1]['voice'] = '+'
 
         # Obtain all unicode categories.
         df['ipa'] = df['ipa'].apply(lambda s: unicodedata.normalize('NFD', s))
@@ -38,8 +61,8 @@ class FeatureProcessor:
 
         df['category_x'] = df[['ipa', 'unicode_category']].apply(tie_bar_treatment, axis=1)
 
-        # Remove anything with `Mn` category unicodes except 'ç', and use them as the base.
-        base_df = df[(~df['category_x'].apply(lambda lst: 'Mn' in lst)) | (df['ipa'] == 'ç')]
+        # Remove anything with `Mn` category unicodes except 'ç' and 'c͡ç', and use them as the base.
+        base_df = df[(~df['category_x'].apply(lambda lst: 'Mn' in lst)) | (df['ipa'] == 'ç') | (df['ipa'] == 'c͡ç')]
 
         save_cols = list(base_df.columns)
         save_cols.remove('unicode_category')
@@ -91,7 +114,7 @@ class FeatureProcessor:
             return base
 
         bases = [get_base(raw)]
-        i = len(bases[-1].ipa)
+        i = len(bases[-1].base)
         while i < len(raw):
             try:
                 # Apply diacritic to the last base segment.
@@ -100,7 +123,7 @@ class FeatureProcessor:
                 i += 1
             except InvalidDiacritic:
                 bases.append(get_base(raw[i:]))
-                i += len(bases[-1].ipa)
+                i += len(bases[-1].base)
         if len(bases) == 1:
             return bases[0]
         return Nphthong(bases)

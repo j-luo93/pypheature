@@ -19,7 +19,10 @@ class Nphthong:
     def __str__(self):
         return ''.join(map(str, self.vowels))
 
+    def __len__(self):
+        return len(self.vowels)
+
     def __post_init__(self):
         for vow in self.vowels:
             if not vow.is_vowel() and not vow.is_glide():
-                raise InvalidNphthong(f'Not every segment is a vowel or glide: {self}')
+                raise InvalidNphthong(f'Not every segment is a vowel or glide: [{", ".join(map(str, self.vowels))}]')
