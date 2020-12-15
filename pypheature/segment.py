@@ -129,7 +129,7 @@ class Feature:
         return self._value
 
     def __eq__(self, other: Optional[bool]):
-        if other not in self.allowed_values:
+        if all(other is not value for value in self.allowed_values):
             raise TypeError(f'Cannot check equality with value {other}.')
         return self.value is other
 
@@ -179,6 +179,14 @@ class Segment(RemoveableMethod):
 
     def __str__(self):
         return self.base + ''.join(self.diacritics)
+
+    def __hash__(self):
+        return hash(str(self))
+
+    def __eq__(self, other: Segment):
+        if not isinstance(other, Segment):
+            raise TypeError(f'Can only compare with segments.')
+        return str(self) == str(other)
 
     def check_features(self, fv: List[str]):
         sign2value = {
