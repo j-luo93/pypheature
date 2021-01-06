@@ -4,7 +4,7 @@ from typing import Dict, List, Union
 
 import pandas as pd
 
-from .diacritic import InvalidDiacritic, get_diacritic
+from .diacritic import InvalidDiacritic, get_diacritic, Diacritic
 from .nphthong import Nphthong
 from .segment import Segment
 
@@ -94,6 +94,8 @@ class FeatureProcessor:
         self._base_segments: Dict[str, Segment] = dict()
         for i, s in self._data.iterrows():
             kwargs = {f: to_value(s[c]) for f, c in feat2col.items()}
+            # NOTE(j_luo) Every feature is not overlong in this sheet.
+            kwargs['overlong'] = False
             seg = Segment(s['ipa'], **kwargs)
             self._base_segments[s['ipa']] = seg
 
@@ -113,14 +115,23 @@ class FeatureProcessor:
             base = self._base_segments[base_raw]
             return base
 
+        def safe_get_diacritic(idx: int) -> Diacritic:
+            # Try longer ones first.
+            if idx < len(raw) - 1:
+                try:
+                    return get_diacritic(raw[idx: idx + 2])
+                except InvalidDiacritic:
+                    pass
+            return get_diacritic(raw[idx])
+
         bases = [get_base(raw)]
         i = len(bases[-1].base)
         while i < len(raw):
             try:
                 # Apply diacritic to the last base segment.
-                d = get_diacritic(raw[i])
+                d = safe_get_diacritic(i)
                 bases[-1] = d.apply_to(bases[-1])
-                i += 1
+                i += len(d)
             except InvalidDiacritic:
                 bases.append(get_base(raw[i:]))
                 i += len(bases[-1].base)

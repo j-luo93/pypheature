@@ -55,6 +55,9 @@ class Diacritic(metaclass=DiacriticMetaclass):
     def __repr__(self):
         return f'Diacritic("{self.ipa}")'
 
+    def __len__(self):
+        return len(self.ipa)
+
 
 class Syllabic(Diacritic):
 
@@ -112,6 +115,11 @@ class Advanced(Diacritic):
 class Long(Diacritic):
     ipa = 'ː'
     changes = {'long': True}
+
+
+class OverLong(Diacritic):
+    ipa = 'ːː'
+    changes = {'overlong': True, 'long': True}
 
 
 class Aspirated(Diacritic):

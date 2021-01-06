@@ -15,10 +15,9 @@ Therefore, I opt to explicitly check the value by using equality check, e.g., `t
 """
 from __future__ import annotations
 
-from dataclasses import field
 import re
 from abc import ABC, abstractmethod
-from dataclasses import dataclass, fields
+from dataclasses import dataclass, field, fields
 from functools import wraps
 from typing import ClassVar, List, Optional, Union
 
@@ -163,6 +162,7 @@ class Segment(RemoveableMethod):
     tense: TernaryFeature
     round: BinaryFeature
     long: BinaryFeature
+    overlong: BinaryFeature
     nasal: BinaryFeature
     coronal: BinaryFeature
     anterior: TernaryFeature
@@ -317,9 +317,21 @@ class Segment(RemoveableMethod):
 
     # ----------------------- Other features ----------------------- #
 
-    @vowel_cond
+    # Duration checks apply to both consonants and vowels.
+
+    duration_class = temp(natural_class('duration'))
+
+    @duration_class
+    def is_short(self) -> bool:
+        return self.check_features(['-long'])
+
+    @duration_class
     def is_long(self) -> bool:
-        return self.check_features(['+long'])
+        return self.check_features(['+long', '-overlong'])
+
+    @duration_class
+    def is_overlong(self) -> bool:
+        return self.check_features(['+overlong'])
 
     @vowel_cond
     def is_nasalized(self) -> bool:
