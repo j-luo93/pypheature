@@ -1,12 +1,15 @@
 import re
 import unicodedata
-from typing import Dict, List, Union
+from collections import defaultdict
+from functools import lru_cache
+from pathlib import Path
+from typing import Dict, List, Optional, Union
 
 import pandas as pd
 
-from .diacritic import InvalidDiacritic, get_diacritic, Diacritic
+from .diacritic import Diacritic, InvalidDiacritic, get_diacritic
 from .nphthong import Nphthong
-from .segment import Segment
+from .segment import FValue, Segment, sign2value
 
 
 class InvalidBaseSegment(Exception):
@@ -16,7 +19,8 @@ class InvalidBaseSegment(Exception):
 class FeatureProcessor:
     """This reads the spreadsheet provided by Hayes."""
 
-    def __init__(self, hayes_path: str):
+    def __init__(self, hayes_path: Optional[str] = None):
+        hayes_path = hayes_path or Path(__file__).parent.parent / 'data/FeaturesDoulosSIL.xls'
         df = pd.read_excel(hayes_path).rename(columns={'Unnamed: 0': 'ipa'})
 
         # -------------- Fix errors in the original file. -------------- #
@@ -103,6 +107,25 @@ class FeatureProcessor:
         pat = '(' + '|'.join(sorted(self._base_segments, key=len, reverse=True)) + ')'
         self._base_regex = re.compile(rf'^{pat}')
 
+        # Store feature vector to segment mappings.
+        self._fv2segment = defaultdict(list)
+
+    def load_repository(self, repo: List[str]):
+        for raw in repo:
+            segment = self.process(raw)
+            if isinstance(segment, Segment):
+                self._fv2segment[segment.fv].append(segment)
+
+    def change_features(self, segment: Segment, updates: List[str]) -> Segment:
+        d = dict(segment.fv)
+        d.update({update[1:]: sign2value[update[0]] for update in updates})
+        new_fv = tuple([(k, d[k]) for k in sorted(d)])
+        candidates = self._fv2segment[new_fv]
+        if len(candidates) != 1:
+            raise RuntimeError(f'Cannot find the unique mapped value.')
+        return candidates[0]
+
+    @lru_cache(maxsize=None)
     def process(self, raw: str) -> Union[Segment, Nphthong]:
         """Process one raw segments by decomposing it into one base segment and multiple diacritics if any."""
         raw = unicodedata.normalize('NFD', raw)

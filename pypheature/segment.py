@@ -17,9 +17,9 @@ from __future__ import annotations
 
 import re
 from abc import ABC, abstractmethod
-from dataclasses import dataclass, field, fields
+from dataclasses import asdict, dataclass, field, fields
 from functools import wraps
-from typing import ClassVar, List, Optional, Union
+from typing import ClassVar, List, Optional, Tuple, Union
 
 from .utils import RemoveableMethod, compose, temp
 
@@ -143,6 +143,15 @@ class BinaryFeature(Feature):
     allowed_values: ClassVar[list] = [True, False]
 
 
+sign2value = {
+    '+': True,
+    '-': False,
+    '0': None
+}
+
+FValue = Union[bool, None]
+
+
 @dataclass
 class Segment(RemoveableMethod):
     base: str
@@ -189,11 +198,6 @@ class Segment(RemoveableMethod):
         return str(self) == str(other)
 
     def check_features(self, fv: List[str]):
-        sign2value = {
-            '+': True,
-            '-': False,
-            '0': None
-        }
         for fstr in fv:
             sign = fstr[0]
             name = fstr[1:]
@@ -203,6 +207,15 @@ class Segment(RemoveableMethod):
             if feat != sign2value[sign]:
                 return False
         return True
+
+    @property
+    def fv(self) -> Tuple[Tuple[str, FValue], ...]:
+        d = asdict(self)
+        fv = list()
+        for k in sorted(d):
+            if k not in ['base', 'diacritics']:
+                fv.append((k, d[k].value))
+        return tuple(fv)
 
     # -------------------------------------------------------------- #
     #                             Manner                             #
