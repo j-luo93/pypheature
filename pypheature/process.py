@@ -26,33 +26,33 @@ class FeatureProcessor:
         # -------------- Fix errors in the original file. -------------- #
 
         # This 'ŋ' should not have any diacritic.
-        df.loc[33]['ipa'] = 'ŋ'
+        df.at[33, 'ipa'] = 'ŋ'
 
         # This 'ʕ' should be a fricative, therefore delayed_release is True.
-        df.loc[57]['delayed release'] = '+'
+        df.at[57, 'delayed release'] = '+'
 
         # Add 'ɐ' which is merged with 'a'.
         df = df.append(df.loc[3].copy(), ignore_index=True)
-        df.loc[len(df) - 1]['ipa'] = 'ɐ'
+        df.at[len(df) - 1, 'ipa'] = 'ɐ'
 
         # Add 'ɜ' which is merged with 'ə'
         df = df.append(df.loc[11].copy(), ignore_index=True)
-        df.loc[len(df) - 1]['ipa'] = 'ɜ'
+        df.at[len(df) - 1, 'ipa'] = 'ɜ'
 
         # Define 'ʜ' as the voiceless pharyngeal trill (I don't know how to define the place of epiglottis), which is close to
         # the voiceless pharyngeal fricative 'ħ'.
         df = df.append(df.loc[56].copy(), ignore_index=True)
-        df.loc[len(df) - 1]['ipa'] = 'ʜ'
+        df.at[len(df) - 1, 'ipa'] = 'ʜ'
         # A trill is a liquid, not an obstruent (like fricative).
-        df.loc[len(df) - 1]['sonorant'] = '+'
-        df.loc[len(df) - 1]['approximant'] = '+'
-        df.loc[len(df) - 1]['delayed release'] = '0'
-        df.loc[len(df) - 1]['trill'] = '+'
+        df.at[len(df) - 1, 'sonorant'] = '+'
+        df.at[len(df) - 1, 'approximant'] = '+'
+        df.at[len(df) - 1, 'delayed release'] = '0'
+        df.at[len(df) - 1, 'trill'] = '+'
 
         # Define 'ʡ' as the voiced counterpart for 'ʜ'.
         df = df.append(df.loc[len(df) - 1].copy(), ignore_index=True)
-        df.loc[len(df) - 1]['ipa'] = 'ʡ'
-        df.loc[len(df) - 1]['voice'] = '+'
+        df.at[len(df) - 1, 'ipa'] = 'ʡ'
+        df.at[len(df) - 1, 'voice'] = '+'
 
         # Obtain all unicode categories.
         df['ipa'] = df['ipa'].apply(lambda s: unicodedata.normalize('NFD', s))
