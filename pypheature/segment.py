@@ -201,11 +201,23 @@ class Segment(RemoveableMethod):
         for fstr in fv:
             sign = fstr[0]
             name = fstr[1:]
-            feat = getattr(self, name)
-            # This equality check includes both value check (whether the values are identical) and
-            # allowed value check (whether the specified value is allowed).
-            if feat != sign2value[sign]:
-                return False
+            if sign == '!':
+                if str(self) == name:
+                    return False
+                continue
+
+            if name == 'alveolar':
+                if not self.is_apico_alveolar():
+                    return False
+            elif name == 'fricative':
+                if not self.is_fricative():
+                    return False
+            else:
+                feat = getattr(self, name)
+                # This equality check includes both value check (whether the values are identical) and
+                # allowed value check (whether the specified value is allowed).
+                if feat != sign2value[sign]:
+                    return False
         return True
 
     @property

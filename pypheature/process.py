@@ -16,6 +16,14 @@ class InvalidBaseSegment(Exception):
     """Raise this when there is no base segment found."""
 
 
+class NonUniqueMapping(Exception):
+    """Raise this when there is multiple segments mapped to the same feature vector."""
+
+
+class NoMappingFound(Exception):
+    """Raise this when there is no segment mapped to the feature vector."""
+
+
 class FeatureProcessor:
     """This reads the spreadsheet provided by Hayes."""
 
@@ -121,8 +129,10 @@ class FeatureProcessor:
         d.update({update[1:]: sign2value[update[0]] for update in updates})
         new_fv = tuple([(k, d[k]) for k in sorted(d)])
         candidates = self._fv2segment[new_fv]
-        if len(candidates) != 1:
-            raise RuntimeError(f'Cannot find the unique mapped value.')
+        if len(candidates) > 1:
+            raise NonUniqueMapping(f'Cannot find the unique mapped value.')
+        if len(candidates) == 0:
+            raise NoMappingFound(f'No mapping found.')
         return candidates[0]
 
     @lru_cache(maxsize=None)
