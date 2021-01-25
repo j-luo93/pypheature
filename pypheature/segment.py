@@ -418,7 +418,14 @@ class Segment(RemoveableMethod):
     def is_pharyngeal(self) -> bool:
         return self.check_features(['-high', '+low', '-front', '+back'])
 
-    # --------------------- Laryngeal features --------------------- #
+    # --------------------------- Labials -------------------------- #
+
+    def is_labial(self) -> bool:
+        return self.check_features(['+labial']) and not self.is_vowel()
+
+    # -------------------------------------------------------------- #
+    #                       Laryngeal features                       #
+    # -------------------------------------------------------------- #
 
     glottal_width_class = temp(natural_class('glottal_width'))
 
