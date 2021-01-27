@@ -119,6 +119,7 @@ class FeatureProcessor:
         self._fv2segment = defaultdict(list)
 
     def load_repository(self, repo: List[str]):
+        self._fv2segment.clear()
         for raw in repo:
             segment = self.process(raw)
             if isinstance(segment, Segment):
